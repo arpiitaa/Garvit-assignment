@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Todo App</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            background: url('https://source.unsplash.com/1600x900/?productivity,workspace') no-repeat center center/cover;
+            color: white;
+            transition: 0.3s;
+        }
+        header {
+            background: rgba(255, 111, 97, 0.9);
+            padding: 15px;
+            color: white;
+        }
+        nav ul {
+            list-style: none;
+            padding: 0;
+        }
+        nav ul li {
+            display: inline;
+            margin: 0 15px;
+        }
+        .hero, .features, .todo-list,.conatct {
+            padding: 30px;
+            background: black;
+            margin: 20px auto;
+            width: 80%;
+            border-radius: 10px;
+            transition: 0.3s;
+        }
+        button {
+            padding: 10px 20px;
+            background: #ff6f61;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: 0.3s;
+        }
+        button:hover {
+            background: blue;
+        }
+        input, select {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+            border: none;
+        }
+        .completed {
+            text-decoration: line-through;
+            color: #ddd;
+        }
+        .overdue {
+            color: red;
+            font-weight: bold;
+        }
+        .progress-bar {
+            width: 80%;
+            background: #ccc;
+            height: 10px;
+            border-radius: 5px;
+            margin: 10px auto;
+            overflow: hidden;
+        }
+        .progress {
+            height: 100%;
+            background: #ff6f61;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .dark-mode {
+            background: #222;
+            color: #eee;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Advanced Todo App</h1>
+        <nav>
+            <ul>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#todo-list">Todo List</a></li>
+				<li><a href="#contact">Contact</a></li>
+				
+            </ul>
+        </nav>
+    </header>
+    
+    <button onclick="toggleDarkMode()">🌙 Toggle Dark Mode</button>
+    
+    <section class="hero">
+        <h2>Organize Your Work & Life</h2>
+        <p>Stay productive with our advanced to-do list app.</p>
+        <button onclick="getStarted()">Get Started</button>
+    </section>
+
+    <section id="todo-list" class="todo-list">
+        <h2>Your To-Do List</h2>
+        <input type="text" id="taskInput" placeholder="Enter a task...">
+        <input type="date" id="dueDate">
+        <select id="category">
+            <option value="Work">Work</option>
+            <option value="Personal">Personal</option>
+            <option value="Shopping">Shopping</option>
+        </select>
+        <button onclick="addTask()">Add Task</button>
+        <button onclick="startVoiceInput()">🎤 Voice Input</button>
+        
+        <div class="progress-bar">
+            <div class="progress" id="progress"></div>
+        </div>
+
+        <div>
+            <button onclick="exportTasks()">Export</button>
+            <input type="file" id="importFile" onchange="importTasks(event)">
+        </div>
+
+        <ul id="taskList"></ul>
+    </section>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", loadTasks);
+
+        function getStarted() {
+            window.location.href = "https://www.todoist.com/";
+        }
+
+        function addTask() {
+            let input = document.getElementById("taskInput");
+            let dueDate = document.getElementById("dueDate").value;
+            let category = document.getElementById("category").value;
+            let taskText = input.value.trim();
+            
+            if (taskText === "") return;
+            
+            let task = {
+                text: taskText,
+                dueDate: dueDate,
+                category: category,
+                completed: false
+            };
+
+            let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            tasks.push(task);
+            localStorage.setItem("tasks", JSON.stringify(tasks));
+
+            renderTasks();
+            input.value = "";
+        }
+
+        function renderTasks() {
+            let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            let taskList = document.getElementById("taskList");
+            taskList.innerHTML = "";
+
+            tasks.forEach((task, index) => {
+                let li = document.createElement("li");
+                li.textContent = `${task.text} [${task.category}] - Due: ${task.dueDate || "No Date"}`;
+                
+                if (task.completed) {
+                    li.classList.add("completed");
+                }
+
+                if (task.dueDate && new Date(task.dueDate) < new Date() && !task.completed) {
+                    li.classList.add("overdue");
+                }
+
+                li.onclick = () => toggleTask(index);
+
+                let removeBtn = document.createElement("button");
+                removeBtn.textContent = "Remove";
+                removeBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    removeTask(index);
+                };
+
+                li.appendChild(removeBtn);
+                taskList.appendChild(li);
+            });
+
+            updateProgress();
+        }
+
+        function toggleTask(index) {
+            let tasks = JSON.parse(localStorage.getItem("tasks"));
+            tasks[index].completed = !tasks[index].completed;
+            localStorage.setItem("tasks", JSON.stringify(tasks));
+            renderTasks();
+        }
+
+        function removeTask(index) {
+            let tasks = JSON.parse(localStorage.getItem("tasks"));
+            tasks.splice(index, 1);
+            localStorage.setItem("tasks", JSON.stringify(tasks));
+            renderTasks();
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle("dark-mode");
+            localStorage.setItem("darkMode", document.body.classList.contains("dark-mode"));
+        }
+
+        function updateProgress() {
+            let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            let completedTasks = tasks.filter(task => task.completed).length;
+            let progress = document.getElementById("progress");
+            progress.style.width = tasks.length ? `${(completedTasks / tasks.length) * 100}%` : "0%";
+        }
+
+        function exportTasks() {
+            let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tasks));
+            let dlAnchor = document.createElement("a");
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", "tasks.json");
+            dlAnchor.click();
+        }
+
+        function importTasks(event) {
+            let file = event.target.files[0];
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                localStorage.setItem("tasks", e.target.result);
+                renderTasks();
+            };
+            reader.readAsText(file);
+        }
+
+        function startVoiceInput() {
+            let recognition = new webkitSpeechRecognition() || new SpeechRecognition();
+            recognition.start();
+            recognition.onresult = function(event) {
+                document.getElementById("taskInput").value = event.results[0][0].transcript;
+            };
+        }
+
+        function loadTasks() {
+            if (localStorage.getItem("darkMode") === "true") {
+                document.body.classList.add("dark-mode");
+            }
+            renderTasks();
+        }
+    </script>
+</body>
+</html>
